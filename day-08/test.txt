@@ -1,0 +1,4 @@
+|> rect 32
+|> rcolumn 1  1
+|> rrow 0  4
+|> rcolumn 1  1
