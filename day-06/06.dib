@@ -1,0 +1,36 @@
+#!meta
+
+{"kernelInfo":{"defaultKernelName":"csharp","items":[{"aliases":[],"name":"csharp"}]}}
+
+#!fsharp
+
+open System.IO
+open System.Collections.Generic
+
+#!fsharp
+
+File.ReadAllLines("test.txt")
+    |> Array.map (fun line -> line.ToCharArray())
+    |> Array.transpose
+    |> Array.map (fun column -> 
+        column
+        |> Seq.countBy id
+        |> Seq.sortByDescending snd
+        |> Seq.head
+        |> fst
+    )
+    |> String.Concat
+
+#!fsharp
+
+File.ReadAllLines("test.txt")
+    |> Array.map (fun line -> line.ToCharArray())
+    |> Array.transpose
+    |> Array.map (fun column -> 
+        column
+        |> Seq.countBy id
+        |> Seq.sortBy snd
+        |> Seq.head
+        |> fst
+    )
+    |> String.Concat

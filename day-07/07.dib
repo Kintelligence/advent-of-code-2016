@@ -1,0 +1,108 @@
+#!meta
+
+{"kernelInfo":{"defaultKernelName":"csharp","items":[{"aliases":[],"name":"csharp"}]}}
+
+#!fsharp
+
+open System.IO
+open System.Collections.Generic
+
+#!fsharp
+
+let rec supportsTLS(s: string) (isHypernet: bool) (foundMatch: bool) : bool =
+    if s.Length < 4 then
+        foundMatch
+    else
+        if s[3] = '[' then
+            supportsTLS (s.Substring(4)) true foundMatch
+        else if s[3] = ']' then
+            supportsTLS (s.Substring(4)) false foundMatch
+        else
+            if s[0] = s[3] && s[1] = s[2] && s[0] <> s[1] then
+                if isHypernet then
+                    false
+                else
+                    supportsTLS (s.Substring(1)) false true
+            else
+                supportsTLS (s.Substring(1)) isHypernet foundMatch
+
+#!fsharp
+
+let rec supportsTLS2(s: char list) (isHypernet: bool) (foundMatch: bool) : bool =
+    match s with
+    | _::_::_::'['::rest ->
+        supportsTLS2 rest true foundMatch
+    | _::_::_::']'::rest ->
+        supportsTLS2 rest false foundMatch
+    | a::b::c::d::rest when a = d && b = c && a <> b && isHypernet ->
+        false
+    | a::b::c::d::rest when a = d && b = c && a <> b && not isHypernet ->
+        supportsTLS2 rest isHypernet true
+    | _::rest ->
+        supportsTLS2 rest isHypernet foundMatch
+    | _ -> 
+        foundMatch
+
+#!fsharp
+
+File.ReadAllLines("input.txt")
+    |> Array.map (fun line -> line.ToCharArray() |> Array.toList)
+    |> Array.filter (fun line -> supportsTLS2 line false false)
+    |> Array.length
+
+#!fsharp
+
+let rec supportsSSL(s: string) (isHypernet: bool) (abas: (char * char) list) (babs: (char * char) list) : bool =
+    if s.Length < 3 then
+        false
+    else
+        if s[2] = '[' then
+            supportsSSL (s.Substring(3)) true abas babs
+        else if s[2] = ']' then
+            supportsSSL (s.Substring(3)) false abas babs
+        else
+            if s[0] = s[2] && s[0] <> s[1] then
+                if isHypernet then
+                    let bab = (s[0], s[1])
+                    if abas |> List.contains bab then
+                        true
+                    else
+                        supportsSSL (s.Substring(1)) isHypernet abas (bab :: babs)
+                else
+                    let aba = (s[1], s[0])
+                    if babs |> List.contains aba then
+                        true
+                    else
+                        supportsSSL (s.Substring(1)) isHypernet (aba :: abas) babs
+            else
+                supportsSSL (s.Substring(1)) isHypernet abas babs
+
+#!fsharp
+
+let rec supportsSSL2(s: char list) (isHypernet: bool) (abas: (char * char) list) (babs: (char * char) list): bool =
+    match s with
+    | _::_::'['::rest ->
+        supportsSSL2 rest true abas babs
+    | _::_::']'::rest ->
+        supportsSSL2 rest false abas babs
+    | a::b::c::rest when a = c && a <> b && isHypernet ->
+        if abas |> List.contains (a, b) then
+            true
+        else
+            supportsSSL2 (s |> List.tail) isHypernet abas ((a, b) :: babs)
+    | a::b::c::rest when a = c && a <> b && not isHypernet ->
+        if babs |> List.contains (b, a) then
+            true
+        else
+            supportsSSL2 (s |> List.tail) isHypernet ((b, a) :: abas) babs
+    | _::rest ->
+        supportsSSL2 rest isHypernet abas babs
+    | _ -> 
+        false
+
+#!fsharp
+
+File.ReadAllLines("input.txt")
+    |> Array.map (fun line -> line.ToCharArray() |> Array.toList)
+    |> Array.filter (fun line -> supportsSSL2 line false [] [] )
+    |> Array.length

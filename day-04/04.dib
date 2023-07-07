@@ -1,0 +1,78 @@
+#!meta
+
+{"kernelInfo":{"defaultKernelName":"csharp","items":[{"aliases":[],"name":"csharp"}]}}
+
+#!fsharp
+
+open System.IO
+open System.Collections.Generic
+
+let tryIntParse (s:string) =
+    match System.Int32.TryParse(s) with
+    | true, result -> Some result
+    | false, _ -> None
+
+#!fsharp
+
+type Room = {
+    name: string;
+    sectorId: int
+    checksum: string;
+};
+
+#!fsharp
+
+let parseRoom (s: string) : Room =
+   let idStart = s.LastIndexOf('-');
+   let checksumStart = s.IndexOf('[');
+   
+   {
+        name = s.Substring(0, idStart);
+        checksum = s.Substring(checksumStart + 1, s.Length - checksumStart - 2);
+        sectorId = tryIntParse(s.Substring(idStart + 1, checksumStart - idStart - 1)) |> Option.defaultValue 0
+   }
+
+#!fsharp
+
+let calculateHash (room: Room) : string =
+    room.name
+        |> Seq.where (fun c -> c <> '-')
+        |> Seq.countBy id
+        |> Seq.sortBy (fun (letter, count) -> (-count, letter))
+        |> Seq.take 5
+        |> Seq.map (fun (letter, _) -> letter)
+        |> String.Concat
+
+#!fsharp
+
+let isRealRoom (room: Room) : bool =
+    room.checksum = calculateHash room
+
+#!fsharp
+
+File.ReadAllLines("input.txt")
+    |> Array.map parseRoom
+    |> Array.where isRealRoom
+    |> Array.sumBy (fun room -> room.sectorId)
+
+#!fsharp
+
+let decrypt (room : Room) =
+    room.name
+        |> Seq.map (fun c -> 
+            match c with
+            | '-' -> ' '
+            | letter -> 
+                let letterValue = int letter - int 'a'
+                let rotatedValue = (letterValue + room.sectorId) % 26
+                char (rotatedValue + int 'a')
+        )
+        |> String.Concat
+
+#!fsharp
+
+File.ReadAllLines("input.txt")
+    |> Array.map parseRoom
+    |> Array.where isRealRoom
+    |> Array.map (fun room -> (decrypt room, room.sectorId))
+    |> Array.where (fun (name, _) -> name.Contains("north"))

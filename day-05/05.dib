@@ -1,0 +1,76 @@
+#!meta
+
+{"kernelInfo":{"defaultKernelName":"csharp","items":[{"aliases":[],"name":"csharp"}]}}
+
+#!fsharp
+
+open System.IO
+open System.Collections.Generic
+open System.Security.Cryptography
+open System.Text
+
+#!fsharp
+
+let md5 (s : string) : byte array =
+    let data = s |> Seq.map (fun c -> byte c) |> Array.ofSeq
+    use md5 = MD5.Create()
+    md5.ComputeHash(data)
+
+#!fsharp
+
+let verifyHash (hash: byte array) : char option =
+    let data = hash |> Array.take 3
+    if data[0] = byte 0 && data[1] = byte 0 && (data[2] &&& byte 0b11110000) = byte 0 then
+        Some (data[2].ToString(("x2"))[1])
+    else
+        None
+
+#!fsharp
+
+let rec crack (s: string) (index: int) (password: string) (remaining: int) : string =
+    if remaining = 0 then
+        password
+    else 
+        let hash = md5 (s + string index)
+
+        match verifyHash hash with
+        | Some c -> crack s (index + 1) (password + c.ToString()) (remaining - 1)
+        | None -> crack s (index + 1) (password) (remaining)
+
+#!fsharp
+
+crack "uqwqemis" 0 "" 8
+
+#!fsharp
+
+let replaceCharAtIndex (index: int) (replacement: char) (input: string) : string =
+    let before = input.[0..(index-1)]
+    let after = input.[(index+1)..]
+    before + (string replacement) + after
+
+#!fsharp
+
+let verifyHash2 (hash: byte array) : (char * int) option =
+    let data = hash |> Array.take 4
+    if data[0] = byte 0 && data[1] = byte 0 && (data[2] &&& byte 0b11110000) = byte 0 then
+        Some (data[3].ToString(("x2"))[0], int (data[2] &&& byte 0b00001111))
+    else
+        None
+
+let rec crack2 (s: string) (index: int) (password: string) (remaining: int) : string =
+    if remaining = 0 then
+        password
+    else 
+        let hash = md5 (s + string index)
+
+        match verifyHash2 hash with
+        | Some (c, l) -> 
+            if password.Length > l && password[l] = '_' then
+                crack2 s (index + 1) (replaceCharAtIndex l c password) (remaining - 1)
+            else
+                crack2 s (index + 1) (password) (remaining)
+        | None -> crack2 s (index + 1) (password) (remaining)
+
+#!fsharp
+
+crack2 "abc" 0 "________" 8

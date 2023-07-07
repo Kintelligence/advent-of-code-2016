@@ -1,3 +1,124 @@
 #!meta
 
-{"kernelInfo":{"defaultKernelName":"fsharp","items":[{"aliases":[],"languageName":"fsharp","name":"fsharp"}]}}
+{"kernelInfo":{"defaultKernelName":"csharp","items":[{"aliases":[],"name":"csharp"},{"aliases":[],"languageName":"fsharp","name":"fsharp"}]}}
+
+#!fsharp
+
+open System.IO
+open System.Collections.Generic
+
+#!fsharp
+
+type Turn = Left | Right
+
+#!fsharp
+
+let tryIntParse (s:string) : int option =
+    match System.Int32.TryParse(s) with
+    | true, result -> Some result
+    | false, _ -> None
+
+#!fsharp
+
+let parseTurn (c:char) =
+    match c with
+    | 'L' -> Left
+    | _ -> Right
+
+#!fsharp
+
+let input : (Turn * int) list =
+    File.ReadAllLines("input.txt")
+    |> Array.map(fun line -> line.Split(',', StringSplitOptions.TrimEntries))
+    |> Array.head
+    |> Array.map(fun ins -> (parseTurn (ins.[0]), tryIntParse(ins.Substring(1)) |> Option.defaultValue 0 ))
+    |> List.ofArray
+
+#!fsharp
+
+input
+
+#!fsharp
+
+type Position = { x: int; y: int }
+type Direction = North | East | South | West
+type State = { position: Position; direction: Direction }
+
+#!fsharp
+
+let turnDirection (turn: Turn) (state: State) : State = 
+    match (turn, state.direction) with
+    | (Left, North) -> { state with direction = West}
+    | (Left, East) -> { state with direction = North}
+    | (Left, South) -> { state with direction = East}
+    | (Left, West) -> { state with direction = South}
+    | (Right, North) -> { state with direction = East}
+    | (Right, East) -> { state with direction = South}
+    | (Right, South) -> { state with direction = West}
+    | (Right, West) -> { state with direction = North}
+
+#!fsharp
+
+let move (steps: int) (state: State) : State =
+    match state.direction with 
+    | North -> { state with  position = { state.position with y = state.position.y + steps}}
+    | East -> { state with  position = { state.position with x = state.position.x + steps}}
+    | South -> { state with  position = { state.position with y = state.position.y - steps}}
+    | West -> { state with  position = { state.position with x = state.position.x - steps}}
+
+#!fsharp
+
+let manhattenDistance (p1: Position) (p2: Position) = 
+    abs (p1.x - p2.x) + abs (p1.y - p2.y)
+
+#!fsharp
+
+let start : State = { position = { x = 0; y = 0 }; direction = North }
+
+let final =
+    List.fold (fun state (turn, steps) ->
+        let nextState = turnDirection turn state
+        move steps nextState
+    ) start input
+
+#!fsharp
+
+manhattenDistance start.position final.position
+
+#!fsharp
+
+let rec getStates (steps: int) (state: State) : State list =
+            match steps with
+            | 0 -> []
+            | _ ->
+                let nextState = move 1 state
+                nextState :: getStates (steps - 1) nextState
+
+#!fsharp
+
+let rec findFirstVisitedTwice (state: State) (visited: Set<Position>) (instructions: (Turn * int) list) : Position =
+    match instructions with
+    | [] -> failwith "No location visited twice"
+    | (turn, steps) :: remainingInstructions -> 
+        let nextState = turnDirection turn state
+        let newStates = getStates steps nextState
+        let duplicateState =
+            newStates
+            |> List.tryPick (fun p -> if visited.Contains p.position then Some p else None) 
+        match duplicateState with
+            | Some duplicate -> duplicate.position
+            | None -> 
+                let newVisited = Set.union visited (Set.ofList (List.map (fun p -> p.position) newStates))
+                findFirstVisitedTwice (List.last newStates) newVisited remainingInstructions
+
+#!fsharp
+
+let found = findFirstVisitedTwice start Set.empty input
+
+#!fsharp
+
+found
+
+#!fsharp
+
+manhattenDistance start.position found

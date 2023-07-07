@@ -1,0 +1,111 @@
+#!meta
+
+{"kernelInfo":{"defaultKernelName":"csharp","items":[{"aliases":[],"name":"csharp"}]}}
+
+#!fsharp
+
+#r "nuget:FsUnit, 5.3.0"
+#r "nuget:Fuchu, 1.1.0"
+
+open System.IO
+open System.Collections.Generic
+open Fuchu
+open FsUnit
+
+#!fsharp
+
+let rec replicateList (count: int) (value: char list): char list =
+    if count <= 0 then
+        []
+    else
+        List.append value (replicateList (count - 1) value)
+
+#!fsharp
+
+let rec decomp (input: char list) : char list =
+    match input with
+    | ' '::tail -> decomp tail
+    | '('::tail -> 
+        let cross = tail |> List.findIndex (fun c -> c = 'x')
+        let stop = tail |> List.skip (cross + 1) |> List.findIndex (fun c -> c = ')')
+
+        let length = List.take cross tail |> List.map string |> String.Concat |> int
+        let times = List.skip (cross + 1) tail |> List.take stop |> List.map string |> String.Concat |> int
+        
+        List.append (replicateList times (List.skip (stop + 2 + cross) tail |> List.take length)) (decomp (List.skip (stop + 2 + cross + length) tail))
+    | head::tail -> head::decomp tail
+    | tail -> tail
+
+#!fsharp
+
+let decompress (input: string): string = 
+    input.ToCharArray() |> Array.toList |> decomp |> String.Concat
+
+#!fsharp
+
+let testData = 
+    Seq.zip (File.ReadAllLines("test.txt")) 
+            (File.ReadAllLines("expected.txt")) 
+    |> List.ofSeq
+
+let tests =
+    testList "" (testData 
+                    |> Seq.map (fun (test, expect) -> testCase test <| 
+                        fun _ -> test |> decompress |> should equal expect  
+                    )
+                )
+
+#!fsharp
+
+tests
+|> run
+|> ignore
+
+#!fsharp
+
+File.ReadAllLines("input.txt") 
+|> Array.head
+|> decompress
+|> String.length
+
+#!fsharp
+
+let rec decomp2 (mods: (int * int) list) (input: char list) : int =
+    match input with
+    | ' '::tail -> decomp2 mods tail
+    | '('::tail -> 
+        let cross = tail |> List.findIndex (fun c -> c = 'x')
+        let stop = tail |> List.skip (cross + 1) |> List.findIndex (fun c -> c = ')')
+
+        let length = List.take cross tail |> List.map string |> String.Concat |> int
+        let times = List.skip (cross + 1) tail |> List.take stop |> List.map string |> String.Concat |> int
+
+        let newMods = 
+            mods 
+            |> List.map (fun (magnitude, duration) -> (magnitude, duration - (cross + stop + 2))) 
+            |> List.filter  (fun (_, duration) -> duration > 0)
+
+        decomp2 ((times, length)::newMods) tail
+    | head::tail -> 
+        let newMods = 
+            mods 
+            |> List.map (fun (magnitude, duration) -> (magnitude, duration - 1))
+            |> List.filter  (fun (_, duration) -> duration > 0)
+
+        let mult =
+            mods
+            |> List.map (fun (magnitude, _) -> magnitude)
+            |> List.sum
+
+        1 * mult + decomp2 newMods tail
+    | tail -> 0
+
+#!fsharp
+
+let decompress2 (input: string): int = 
+    input.ToCharArray() |> Array.toList |> decomp2 []
+
+#!fsharp
+
+"X(8x2)(3x3)ABCY"
+|> decompress2

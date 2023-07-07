@@ -1,0 +1,105 @@
+#!meta
+
+{"kernelInfo":{"defaultKernelName":"csharp","items":[{"aliases":[],"name":"csharp"}]}}
+
+#!fsharp
+
+open System.IO
+open System.Collections.Generic
+
+#!fsharp
+
+type Keypad = {
+    buttons: char array array;
+}
+type Position = { x: int; y: int }
+type Instruction = U | L | R | D
+
+#!fsharp
+
+let keypad : Keypad = {
+    buttons = [|
+        [|' ';' ';' ';' ';' '|]
+        [|' ';'1';'2';'3';' '|]
+        [|' ';'4';'5';'6';' '|]
+        [|' ';'7';'8';'9';' '|]
+        [|' ';' ';' ';' ';' '|]
+    |];
+}
+
+#!fsharp
+
+let parseLine (line: string) : Instruction list =
+    line.ToCharArray()
+    |> Array.map (fun c -> 
+        match c with
+        | 'U' -> U
+        | 'L' -> L
+        | 'D' -> D
+        | 'R' -> R
+        | _ -> U
+    )
+    |> Array.toList
+
+#!fsharp
+
+let input : (Instruction list list) =
+    File.ReadAllLines("input.txt")
+    |> Array.map(parseLine)
+    |> List.ofArray
+
+#!fsharp
+
+let get (position: Position) (keypad: Keypad) : char =
+    keypad.buttons[position.y][position.x]
+
+#!fsharp
+
+let move (position: Position) (instruction: Instruction) (keypad: Keypad) : Position =
+    match instruction with 
+    | D -> if (get { position with y = position.y + 1 } keypad <> ' ') then { position with y = position.y + 1 } else position
+    | R -> if (get { position with x = position.x + 1 } keypad <> ' ') then { position with x = position.x + 1 } else position
+    | U -> if (get { position with y = position.y - 1 } keypad <> ' ') then { position with y = position.y - 1 } else position
+    | L -> if (get { position with x = position.x - 1 } keypad <> ' ') then { position with x = position.x - 1 } else position
+
+#!fsharp
+
+let rec findCode (position: Position) (instructions: Instruction list list) (keypad: Keypad) (code: Position list) : Position list =
+    match instructions with
+    | [] -> code
+    | line :: rest ->
+        let nextPosition = line |> Seq.fold (fun p i -> move p i keypad) position
+        findCode nextPosition rest keypad (nextPosition :: code)
+
+#!fsharp
+
+let mapCode (code: Position list) (keypad: Keypad) : string =    
+    code
+    |> List.map (fun p -> keypad.buttons[p.y][p.x])
+    |> String.Concat
+
+#!fsharp
+
+let start : Position = { x = 2; y = 2 }
+let codePositions = findCode start input keypad [] |> List.rev
+mapCode codePositions keypad
+
+#!fsharp
+
+let keypad : Keypad = {
+    buttons = [|
+        [|' ';' ';' ';' ';' ';' ';' '|]
+        [|' ';' ';' ';'1';' ';' ';' '|]
+        [|' ';' ';'2';'3';'4';' ';' '|]
+        [|' ';'5';'6';'7';'8';'9';' '|]
+        [|' ';' ';'A';'B';'C';' ';' '|]
+        [|' ';' ';' ';'D';' ';' ';' '|]
+        [|' ';' ';' ';' ';' ';' ';' '|]
+    |];
+}
+
+#!fsharp
+
+let start : Position = { x = 1; y = 3 }
+let codePositions = findCode start input keypad [] |> List.rev
+mapCode codePositions keypad

@@ -1,0 +1,64 @@
+#!meta
+
+{"kernelInfo":{"defaultKernelName":"csharp","items":[{"aliases":[],"name":"csharp"}]}}
+
+#!fsharp
+
+open System.IO
+open System.Collections.Generic
+
+#!fsharp
+
+type Triangle = {
+    a: int;
+    b: int;
+    c: int
+}
+
+#!fsharp
+
+let tryIntParse (s:string) =
+    match System.Int32.TryParse(s) with
+    | true, result -> Some result
+    | false, _ -> None
+
+#!fsharp
+
+let splitLine (s:string) =
+    s.Split(' ', StringSplitOptions.RemoveEmptyEntries) |> Array.map(tryIntParse) |> Array.map(Option.defaultValue 0)
+
+#!fsharp
+
+let parseTriangle (nums: int array): Triangle =
+    let sorted = nums |> Array.toList |> List.sort
+
+    {
+        a = sorted[0];
+        b = sorted[1];
+        c = sorted[2];
+    }
+
+#!fsharp
+
+let isPossible (triangle: Triangle) : bool =
+    triangle.a + triangle.b > triangle.c
+
+#!fsharp
+
+File.ReadAllLines("input.txt")
+|> Array.map(splitLine)
+|> Array.map(parseTriangle)
+|> List.ofArray
+|> List.filter isPossible
+|> List.length
+
+#!fsharp
+
+File.ReadAllLines("input.txt")
+|> Array.map splitLine
+|> Array.chunkBySize 3
+|> Array.map Array.transpose
+|> Array.collect (Array.map parseTriangle)
+|> List.ofArray
+|> List.filter isPossible
+|> List.length
